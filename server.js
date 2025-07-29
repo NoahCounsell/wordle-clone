@@ -26,19 +26,13 @@ function updateWordOfTheDay(){
     })
 }
 
-fs.readFile('word_of_the_day.json', 'utf8', (err, data) => {
-    if (err){
-        console.error('Unable to read word_of_the_day.json');
-    }
-    const wordOfTheDay = JSON.parse(data);
-    const now = new Date();
-    const yesterdayMidnight = new Date(now);
-    yesterdayMidnight.setDate(now.getDate() - 1);
-    yesterdayMidnight.setHours(24, 0, 0, 0);
-    if (new Date(wordOfTheDay.last_updated) < yesterdayMidnight) {
+// change word of the day every day at 11:59pm
+
+setInterval(() => {
+    if (new Date().getHours() === 23 && new Date().getMinutes() === 59) {
         updateWordOfTheDay();
     }
-})
+}, 60000);
 
 
 

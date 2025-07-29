@@ -1,0 +1,172 @@
+
+<head>
+    <meta charset="UTF-8" user-scalable="no">
+</head>
+
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+
+<div class="flex flex-col gap-10 items-center justify-center h-screen">
+    <div class="text-4xl font-mono">Wordle Clone</div>
+    <div class="flex flex-col gap-4 items-center justify-center" id="game-container"></div>
+</div>
+
+<div class="absolute bottom-0 left-0 p-4">
+    <div class="text-sm text-gray-500">Programed by a <a href="https://github.com/NoahCounsell" class="text-blue-500">human</a></div>
+</div>
+
+
+<script>
+
+    // generate rows
+
+    const gameContainer = document.getElementById('game-container');
+
+    const guessRow = document.createElement('div');
+    guessRow.innerHTML = `
+        <div class="flex flex-row gap-2" id="guess-row">
+            <input type="text" class="w-20 h-20 rounded-lg border-2 border-gray-300 focus:border-blue-400 focus:outline-none caret-transparent text-center text-2xl text-mono" maxlength="1" id="letter">
+            <input type="text" class="w-20 h-20 rounded-lg border-2 border-gray-300 focus:border-blue-400 focus:outline-none caret-transparent text-center text-2xl text-mono" maxlength="1" id="letter">
+            <input type="text" class="w-20 h-20 rounded-lg border-2 border-gray-300 focus:border-blue-400 focus:outline-none caret-transparent text-center text-2xl text-mono" maxlength="1" id="letter">
+            <input type="text" class="w-20 h-20 rounded-lg border-2 border-gray-300 focus:border-blue-400 focus:outline-none caret-transparent text-center text-2xl text-mono" maxlength="1" id="letter">
+            <input type="text" class="w-20 h-20 rounded-lg border-2 border-gray-300 focus:border-blue-400 focus:outline-none caret-transparent text-center text-2xl text-mono" maxlength="1" id="letter">
+        </div>
+    `
+
+    activeRow = 0;
+    for (let i = 0; i < 6; i++) {
+        const row = guessRow.cloneNode(true);
+        if (i !== activeRow) {
+            row.querySelectorAll('input').forEach(input => {
+                input.classList.add('bg-gray-100');
+                input.disabled = true;
+            });
+        }
+        gameContainer.appendChild(row);
+    }
+
+    const rows = document.querySelectorAll('#game-container > div');
+    
+    rows.forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        
+        inputs.forEach((input, idx) => {
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Backspace') {
+                    if (input.value === "" && idx > 0) {
+                        inputs[idx - 1].focus();
+                    }
+                } else if (/^[a-z]$/.test(e.key)) {
+                    input.value = e.key;
+                    setTimeout(() => {
+                        if (inputs[idx + 1]) {
+                            inputs[idx + 1].focus();
+                        }
+                    }, 40);
+                } else if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    if (idx > 0) {
+                        inputs[idx - 1].focus();
+                    }
+                } else if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    if (idx < inputs.length - 1) {
+                        inputs[idx + 1].focus();
+                    }
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    checkGuess();
+                }
+            });
+        });
+    });
+
+
+    function checkGuess() {
+        let guess = [];
+        const inputs = rows[activeRow].querySelectorAll('input');
+        
+        for (let i = 0; i < inputs.length; i++) {
+            if(inputs[i].value) {
+                guess.push(inputs[i].value);
+            } else {
+                alert('Please fill in all the boxes');
+                return;
+            }
+        }
+        
+        guess = guess.join('');
+        
+        fetch('/check', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                guess: guess
+            })
+        })
+        .then(res => res.json()).then(data => {
+            
+            console.log(data);
+
+            if(data.valid && data.correct){
+                rows[activeRow].querySelectorAll('input').forEach(input => {
+                    input.classList.add('bg-green-100', 'border-green-400');
+                    input.disabled = true;
+                });
+            } else if (data.valid && !data.correct){
+
+                const rows = document.querySelectorAll('#game-container > div');
+
+                if (activeRow === 5){
+                    rows[5].querySelectorAll('input').forEach(input => {
+                        input.classList.add('bg-red-100', 'border-red-400');
+                        input.disabled = true;
+                    });
+                    return;
+                }
+
+                rows[activeRow].querySelectorAll('input').forEach(input => {
+                    input.classList.add('bg-gray-100');
+                    input.disabled = true;
+                });
+
+                rows[activeRow].querySelectorAll('input').forEach((input, idx) => {
+
+                    input.classList.remove('bg-gray-100', 'border-gray-300');
+                    
+                    if (data.letterValues[idx] === 'green') {
+                        input.classList.add('bg-green-100');
+                        input.classList.add('border-green-400');
+                    } else if (data.letterValues[idx] === 'yellow') {
+                        input.classList.add('bg-yellow-100');
+                        input.classList.add('border-yellow-400');
+                    } else if (data.letterValues[idx] === 'gray') {
+                        input.classList.add('bg-gray-100');
+                        input.classList.add('border-gray-300');
+                    }
+                });
+
+                activeRow++;
+
+                // Additional safety check to prevent going beyond the last row
+                if (activeRow < 6) {
+                    rows[activeRow].querySelectorAll('input').forEach(input => {
+                        input.classList.remove('bg-gray-100');
+                        input.disabled = false;
+                    });
+
+                    rows[activeRow].querySelectorAll('input')[0].focus();
+                }
+
+            } else {
+                alert('Invalid word');
+            }
+        }).catch(err => {
+            console.error(err);
+        })
+
+        
+    }
+</script>
