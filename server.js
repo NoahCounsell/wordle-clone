@@ -10,30 +10,49 @@ app.get('/', (req, res) => {
 });
 
 
-function updateWordOfTheDay(){
+function updateWordOfTheDay() {
     fs.readFile('word_of_the_days.json', 'utf8', (err, data) => {
-        if (err){
+        if (err) {
             console.error('Unable to read word_of_the_days.json');
+            return;
         }
-        const words = JSON.parse(data)
-        const newWordOfTheDay = words.word_of_the_days[Math.floor(Math.random() * words.word_of_the_days.length)];
 
-        fs.writeFile('word_of_the_day.json', JSON.stringify({word_of_the_day: newWordOfTheDay, last_updated: new Date().toISOString()}), (err) => {
-            if (err){
-                console.error('Unable to write word_of_the_day.json');
+        const words = JSON.parse(data);
+        const newWord = words.word_of_the_days[Math.floor(Math.random() * words.word_of_the_days.length)];
+
+        fs.readFile('word_of_the_day.json', 'utf8', (err, data) => {
+            if (err) {
+                console.error('Cannot read word_of_the_day.json');
+                return;
             }
-        })
-    })
+
+            const stored = JSON.parse(data);
+            const today = new Date().toISOString().slice(0, 10);
+
+            if (stored.last_updated !== today) {
+                const updated = {
+                    word_of_the_day: newWord,
+                    last_updated: today
+                };
+
+                fs.writeFile('word_of_the_day.json', JSON.stringify(updated, null, 2), (err) => {
+                    if (err) {
+                        console.error('Unable to write word_of_the_day.json');
+                        return;
+                    }
+                    console.log('Word of the day updated for:', today);
+                });
+            } else {
+                console.log('Already updated today:', today);
+            }
+        });
+    });
 }
 
-// change word of the day every day at 11:59pm
 
 setInterval(() => {
-    if (new Date().getHours() === 23 && new Date().getMinutes() === 59) {
-        updateWordOfTheDay();
-    }
-}, 60000);
-
+    updateWordOfTheDay();
+}, 30000);
 
 
 app.post('/check', (req, res) => {
@@ -58,19 +77,75 @@ app.post('/check', (req, res) => {
                     })
                 } else {
                     let letterValues = [];
+                    
                     req.body.guess.split('').forEach((letter, idx) => {
                         if(wordOfTheDay.word_of_the_day.split('')[idx] === letter){
-                            letterValues.push('green');
-                        } else if(wordOfTheDay.word_of_the_day.includes(letter)){
-                            letterValues.push('yellow');
+                            letterValues.push({letter: letter, color: 'green'});
+                        } else if (wordOfTheDay.word_of_the_day.includes(letter)){
+                            letterValues.push({letter: letter, color: 'yellow'});
                         } else {
-                            letterValues.push('gray');
+                            letterValues.push({letter: letter, color: 'gray'});
                         }
                     });
+
+                    // prepare to data for yellows
+
+                    const guess = req.body.guess.split('');
+                    const wordOfTheDayLetterQuantities = {};
+                    const guessLetterQuantities = {};
+                    
+                    wordOfTheDay.word_of_the_day.split('').forEach((letter, idx) => {
+                        if(wordOfTheDayLetterQuantities.hasOwnProperty(letter)){
+                            wordOfTheDayLetterQuantities[letter]++;
+                        } else {
+                            wordOfTheDayLetterQuantities[letter] = 1;
+                        }
+                    })
+
+                    guess.forEach((letter, idx) => {
+                        if(guessLetterQuantities.hasOwnProperty(letter)){
+                            guessLetterQuantities[letter]++;
+                        } else {
+                            guessLetterQuantities[letter] = 1;
+                        }
+                    })
+
+                    // check for resolved yellows
+
+                    Object.keys(guessLetterQuantities).forEach((letter, idx) => {
+                        
+                        let changesNeeded = guessLetterQuantities[letter] - wordOfTheDayLetterQuantities[letter] || 0;
+
+                        let letterValuePlaces = [];
+
+                        guess.forEach((l, i) => {
+                            if (l === letter) {
+                                letterValuePlaces.push(i);
+                            }
+                        });
+
+                        letterValuePlaces.forEach((place) => {
+                            if(letterValues[place].color === 'yellow' && changesNeeded > 0){
+                                letterValues[place].color = 'gray';
+                                changesNeeded--;
+                            }
+                        })
+
+                    })
+
+                    // end of check for resolved yellows
+
+                    
+                    const colorValues = [];
+                    
+                    letterValues.forEach((letter, idx) => {
+                        colorValues.push(letter.color);
+                    })
+
                     res.send({
                         valid: true,
                         correct: false,
-                        letterValues: letterValues
+                        letterValues: colorValues
                     })
                 }
             })
