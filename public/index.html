@@ -26,11 +26,11 @@
     const guessRow = document.createElement('div');
     guessRow.innerHTML = `
         <div class="flex flex-row gap-2" id="guess-row">
-            <input type="text" class="w-12 h-12 md:w-20 md:h-20 rounded-lg border-2 border-gray-300 focus:border-blue-400 focus:outline-none caret-transparent text-center text-xl md:text-2xl text-mono" maxlength="1" id="letter">
-            <input type="text" class="w-12 h-12 md:w-20 md:h-20 rounded-lg border-2 border-gray-300 focus:border-blue-400 focus:outline-none caret-transparent text-center text-xl md:text-2xl text-mono" maxlength="1" id="letter">
-            <input type="text" class="w-12 h-12 md:w-20 md:h-20 rounded-lg border-2 border-gray-300 focus:border-blue-400 focus:outline-none caret-transparent text-center text-xl md:text-2xl text-mono" maxlength="1" id="letter">
-            <input type="text" class="w-12 h-12 md:w-20 md:h-20 rounded-lg border-2 border-gray-300 focus:border-blue-400 focus:outline-none caret-transparent text-center text-xl md:text-2xl text-mono" maxlength="1" id="letter">
-            <input type="text" class="w-12 h-12 md:w-20 md:h-20 rounded-lg border-2 border-gray-300 focus:border-blue-400 focus:outline-none caret-transparent text-center text-xl md:text-2xl text-mono" maxlength="1" id="letter">
+            <input type="text" class="w-12 h-12 md:w-20 md:h-20 rounded-lg border-2 border-gray-300 focus:border-blue-400 focus:outline-none caret-transparent text-center text-xl md:text-2xl text-mono" maxlength="1" id="letter" autocapitalize="off">
+            <input type="text" class="w-12 h-12 md:w-20 md:h-20 rounded-lg border-2 border-gray-300 focus:border-blue-400 focus:outline-none caret-transparent text-center text-xl md:text-2xl text-mono" maxlength="1" id="letter" autocapitalize="off">
+            <input type="text" class="w-12 h-12 md:w-20 md:h-20 rounded-lg border-2 border-gray-300 focus:border-blue-400 focus:outline-none caret-transparent text-center text-xl md:text-2xl text-mono" maxlength="1" id="letter" autocapitalize="off">
+            <input type="text" class="w-12 h-12 md:w-20 md:h-20 rounded-lg border-2 border-gray-300 focus:border-blue-400 focus:outline-none caret-transparent text-center text-xl md:text-2xl text-mono" maxlength="1" id="letter" autocapitalize="off">
+            <input type="text" class="w-12 h-12 md:w-20 md:h-20 rounded-lg border-2 border-gray-300 focus:border-blue-400 focus:outline-none caret-transparent text-center text-xl md:text-2xl text-mono" maxlength="1" id="letter" autocapitalize="off">
         </div>
     `
 
@@ -99,10 +99,17 @@
                 guess.push(inputs[i].value);
             } else {
                 const row = rows[activeRow].querySelector('#guess-row');
-                row.classList.add('animate-bounce');
+                row.style.transition = 'transform 60ms ease-in-out';
+                row.style.transform = 'translateX(-8px)';
                 setTimeout(() => {
-                    row.classList.remove('animate-bounce');
-                }, 400);
+                    row.style.transform = 'translateX(8px)';
+                    setTimeout(() => {
+                        row.style.transform = 'translateX(-4px)';
+                        setTimeout(() => {
+                            row.style.transform = 'translateX(0)';
+                        }, 60);
+                    }, 60);
+                }, 60);
                 return;
             }
         }
@@ -175,10 +182,22 @@
                 rows[activeRow].querySelectorAll('input').forEach(input => {
                     input.classList.add('bg-orange-100', 'border-orange-400');
                     setTimeout(() => {
-                        input.classList.remove('bg-orange-100', 'border-orange-400');
+                        const row = rows[activeRow].querySelector('#guess-row');
+                        row.style.transition = 'transform 60ms ease-in-out';
+                        row.style.transform = 'translateX(-8px)';
+                        setTimeout(() => {
+                            row.style.transform = 'translateX(8px)';
+                            setTimeout(() => {
+                                row.style.transform = 'translateX(-4px)';
+                                setTimeout(() => {
+                                    row.style.transform = 'translateX(0)';
+                                }, 60);
+                            }, 60);
+                        }, 60);
                         input.value = '';
+                        input.classList.remove('bg-orange-100', 'border-orange-400');
                         rows[activeRow].querySelectorAll('input')[0].focus();
-                    }, 300);
+                    }, 400);
                 });
             }
         }).catch(err => {
